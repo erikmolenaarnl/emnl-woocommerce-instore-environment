@@ -4,7 +4,7 @@
  * Description: This plugin makes a public Woocommerce store suitable for placing orders in an instore environment with an dedicated instore payment method. You can set a IP address and user agent to identify the instore environment.
  * Author: Erik Molenaar
  * Author URI: https://erikmolenaar.nl
- * Version: 1.0
+ * Version: 1.1
  */
 
 
@@ -13,8 +13,8 @@ if ( ! defined ( 'ABSPATH' ) ) exit;
 
 
 // Define constants
-define ( 'EMNL_INSTORE_ENVIRONMENT_IP', '86.86.139.48' );
-define ( 'EMNL_INSTORE_ENVIRONMENT_USER_AGENT', 'Chrome' );
+define ( 'EMNL_INSTORE_ENVIRONMENT_IP', '123.123.123.123' );
+define ( 'EMNL_INSTORE_ENVIRONMENT_USER_AGENT', 'Macintosh; Intel Mac OS X 10_6_8' ); // Note: case sensitive!!!
 define ( 'EMNL_INSTORE_ENVIRONMENT_PAYMENT_METHOD', 'pay_gateway_instore' );
 
 
@@ -25,7 +25,7 @@ function emnl_wie_set_instore_environment() {
     // Detecting an instore environment. If not, stop here
     if ( ! emnl_wie_detect_instore_environment() ) { return; }
 
-    // Step 1 - Change Woocommerce account settings not compatible with instore environment
+    // Step 1 - Change Woocommerce core behaviour not compatible with instore environment
 
         // Enable guest checkout
         add_filter ( 'pre_option_woocommerce_enable_guest_checkout', 'emnl_wie_return_yes' );
@@ -39,15 +39,28 @@ function emnl_wie_set_instore_environment() {
         // Disable create account on the "My account" page
         add_filter ( 'pre_option_woocommerce_enable_myaccount_registration', 'emnl_wie_return_no' );
 
+        // Do not remember previous filled in checkout fields (except for country)
+        add_filter ( 'woocommerce_checkout_get_value', 'emnl_wie_empty_checkout_fields_except_country', 10, 2 );
+        function emnl_wie_empty_checkout_fields_except_country ( $value, $input ) {
+
+            if ( 'billing_country' === $input || 'shipping_country' === $input ) {
+                return $value;
+            } else {
+                return '';
+            }
+        
+        }
+
     // Step 2 - Disable plugins or code which are not compatible or desired in a instore environment
 
         // Disable plugin "Cookie notification"
-        // Still have to find a filter to disable this one...
+        add_filter ( 'catapult_cookie_content', '__return_false' );
 
         // Disable plugin "Optinmonster"
         add_filter ( 'optinmonster_pre_campaign_should_output', '__return_false' );
 
     // Useful functions for returning strings "no" of "yes" to filters easily
+
     function emnl_wie_return_no() { return "no"; }
     function emnl_wie_return_yes() { return "yes"; }
 
@@ -86,7 +99,7 @@ function emnl_wie_filter_payment_methods ( $gateways_available ) {
         
     // Unset ONLY instore payment method
     } else {
-        unset($gateways_available[EMNL_INSTORE_ENVIRONMENT_PAYMENT_METHOD]);
+        unset ( $gateways_available[EMNL_INSTORE_ENVIRONMENT_PAYMENT_METHOD]);
     }
 
     return $gateways_available;
